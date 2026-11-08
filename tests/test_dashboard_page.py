@@ -17,14 +17,35 @@ class TestDashboardPage(unittest.TestCase):
 
         cls.app = QApplication.instance() or QApplication([])
 
+    @patch("src.ui.pages.dashboard_page.SystemService")
+    @patch("src.ui.pages.dashboard_page.MemoryService")
     @patch("src.ui.pages.dashboard_page.DiskService")
-    def setUp(self, mock_disk_service) -> None:
+    def setUp(
+        self,
+        mock_disk_service,
+        mock_memory_service,
+        mock_system_service,
+    ) -> None:
         """Створює сторінку Dashboard перед кожним тестом."""
 
         mock_disk_service.return_value.get_usage.return_value = SimpleNamespace(
             total=500 * 1024**3,
             used=300 * 1024**3,
             free=200 * 1024**3,
+        )
+
+        mock_memory_service.return_value.get_usage.return_value = SimpleNamespace(
+            total=8 * 1024**3,
+            used=5 * 1024**3,
+            available=3 * 1024**3,
+            percent=62.5,
+        )
+
+        mock_system_service.return_value.get_info.return_value = SimpleNamespace(
+            model="MacBook Pro",
+            chip="Apple M2",
+            macos_version="15.0",
+            architecture="arm64",
         )
 
         self.page = DashboardPage()
@@ -51,10 +72,28 @@ class TestDashboardPage(unittest.TestCase):
         self.assertIn("Загалом 500.0 GB", status)
 
     def test_storage_status_handles_error(self) -> None:
-        """Перевіряє обробку помилки отримання даних."""
+        """Перевіряє обробку помилки отримання даних накопичувача."""
 
-        with patch("src.ui.pages.dashboard_page.DiskService") as mock_disk_service:
+        with (
+            patch("src.ui.pages.dashboard_page.DiskService") as mock_disk_service,
+            patch("src.ui.pages.dashboard_page.MemoryService") as mock_memory_service,
+            patch("src.ui.pages.dashboard_page.SystemService") as mock_system_service,
+        ):
             mock_disk_service.return_value.get_usage.side_effect = OSError
+
+            mock_memory_service.return_value.get_usage.return_value = SimpleNamespace(
+                total=8 * 1024**3,
+                used=5 * 1024**3,
+                available=3 * 1024**3,
+                percent=62.5,
+            )
+
+            mock_system_service.return_value.get_info.return_value = SimpleNamespace(
+                model="MacBook Pro",
+                chip="Apple M2",
+                macos_version="15.0",
+                architecture="arm64",
+            )
 
             page = DashboardPage()
 
@@ -63,20 +102,57 @@ class TestDashboardPage(unittest.TestCase):
             "Не вдалося отримати дані",
         )
 
-    def test_memory_status_initial_value(self) -> None:
-        """Перевіряє початковий стан пам'яті."""
+    def test_memory_status_displays_memory_usage(self) -> None:
+        """Перевіряє відображення показників оперативної пам'яті."""
+
+        status = self.page._memory_card._status_label.text()
+
+        self.assertIn("Використано 5.0 GB", status)
+        self.assertIn("Доступно 3.0 GB", status)
+        self.assertIn("Загалом 8.0 GB", status)
+
+    def test_memory_status_handles_error(self) -> None:
+        """Перевіряє обробку помилки отримання даних RAM."""
+
+        with (
+            patch("src.ui.pages.dashboard_page.DiskService"),
+            patch("src.ui.pages.dashboard_page.SystemService"),
+            patch("src.ui.pages.dashboard_page.MemoryService") as mock_memory_service,
+        ):
+            mock_memory_service.return_value.get_usage.side_effect = OSError
+
+            page = DashboardPage()
 
         self.assertEqual(
-            self.page._memory_card._status_label.text(),
-            "Не перевірено",
+            page._memory_card._status_label.text(),
+            "Не вдалося отримати дані",
         )
 
-    def test_system_status_initial_value(self) -> None:
-        """Перевіряє початковий стан системи."""
+    def test_system_status_displays_system_info(self) -> None:
+        """Перевіряє відображення характеристик Mac."""
+
+        status = self.page._system_card._status_label.text()
+
+        self.assertIn("Модель: MacBook Pro", status)
+        self.assertIn("Чип: Apple M2", status)
+        self.assertIn("macOS: 15.0", status)
+        self.assertIn("Архітектура: arm64", status)
+
+    def test_system_status_handles_error(self) -> None:
+        """Перевіряє обробку помилки отримання системних даних."""
+
+        with (
+            patch("src.ui.pages.dashboard_page.DiskService"),
+            patch("src.ui.pages.dashboard_page.MemoryService"),
+            patch("src.ui.pages.dashboard_page.SystemService") as mock_system_service,
+        ):
+            mock_system_service.return_value.get_info.side_effect = OSError
+
+            page = DashboardPage()
 
         self.assertEqual(
-            self.page._system_card._status_label.text(),
-            "Не перевірено",
+            page._system_card._status_label.text(),
+            "Не вдалося отримати дані",
         )
 
 

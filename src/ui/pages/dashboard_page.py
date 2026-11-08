@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 )
 from src.services.disk_service import DiskService
 from src.services.memory_service import MemoryService
+from src.services.system_service import SystemService
 from src.ui.widgets.status_card import StatusCard
 
 
@@ -19,6 +20,7 @@ class DashboardPage(QWidget):
 
         self._disk_service = DiskService()
         self._memory_service = MemoryService()
+        self._system_service = SystemService()
 
         self._storage_card = StatusCard(
             "Сховище",
@@ -35,6 +37,7 @@ class DashboardPage(QWidget):
         self._setup_ui()
         self._update_storage_status()
         self._update_memory_status()
+        self._update_system_status()
 
     def _setup_ui(self) -> None:
         """Створює та компонувує елементи Dashboard."""
@@ -107,3 +110,21 @@ class DashboardPage(QWidget):
             status = "Не вдалося отримати дані"
 
         self._memory_card.set_status(status)
+
+    def _update_system_status(self) -> None:
+        """Отримує та відображає інформацію про систему."""
+
+        try:
+            info = self._system_service.get_info()
+
+            status = (
+                f"Модель: {info.model}\n"
+                f"Чип: {info.chip}\n"
+                f"macOS: {info.macos_version}\n"
+                f"Архітектура: {info.architecture}"
+            )
+
+        except OSError:
+            status = "Не вдалося отримати дані"
+
+        self._system_card.set_status(status)
