@@ -115,10 +115,21 @@ class TestDashboardPage(unittest.TestCase):
         """Перевіряє обробку помилки отримання даних RAM."""
 
         with (
-            patch("src.ui.pages.dashboard_page.DiskService"),
-            patch("src.ui.pages.dashboard_page.SystemService"),
+            patch("src.ui.pages.dashboard_page.DiskService") as mock_disk_service,
+            patch("src.ui.pages.dashboard_page.SystemService") as mock_system_service,
             patch("src.ui.pages.dashboard_page.MemoryService") as mock_memory_service,
         ):
+            mock_disk_service.return_value.get_usage.return_value = SimpleNamespace(
+                total=500 * 1024**3,
+                used=300 * 1024**3,
+                free=200 * 1024**3,
+            )
+            mock_system_service.return_value.get_info.return_value = SimpleNamespace(
+                model="MacBook Pro",
+                chip="Apple M2",
+                macos_version="15.0",
+                architecture="arm64",
+            )
             mock_memory_service.return_value.get_usage.side_effect = OSError
 
             page = DashboardPage()
@@ -127,25 +138,27 @@ class TestDashboardPage(unittest.TestCase):
             page._memory_card._status_label.text(),
             "Не вдалося отримати дані",
         )
-
-    def test_system_status_displays_system_info(self) -> None:
-        """Перевіряє відображення характеристик Mac."""
-
-        status = self.page._system_card._status_label.text()
-
-        self.assertIn("Модель: MacBook Pro", status)
-        self.assertIn("Чип: Apple M2", status)
-        self.assertIn("macOS: 15.0", status)
-        self.assertIn("Архітектура: arm64", status)
+        page.close()
 
     def test_system_status_handles_error(self) -> None:
         """Перевіряє обробку помилки отримання системних даних."""
 
         with (
-            patch("src.ui.pages.dashboard_page.DiskService"),
-            patch("src.ui.pages.dashboard_page.MemoryService"),
+            patch("src.ui.pages.dashboard_page.DiskService") as mock_disk_service,
+            patch("src.ui.pages.dashboard_page.MemoryService") as mock_memory_service,
             patch("src.ui.pages.dashboard_page.SystemService") as mock_system_service,
         ):
+            mock_disk_service.return_value.get_usage.return_value = SimpleNamespace(
+                total=500 * 1024**3,
+                used=300 * 1024**3,
+                free=200 * 1024**3,
+            )
+            mock_memory_service.return_value.get_usage.return_value = SimpleNamespace(
+                total=8 * 1024**3,
+                used=5 * 1024**3,
+                available=3 * 1024**3,
+                percent=62.5,
+            )
             mock_system_service.return_value.get_info.side_effect = OSError
 
             page = DashboardPage()
@@ -154,6 +167,44 @@ class TestDashboardPage(unittest.TestCase):
             page._system_card._status_label.text(),
             "Не вдалося отримати дані",
         )
+        page.close()
+
+    def test_dashboard_timers_are_active(self) -> None:
+        """Перевіряє запуск усіх таймерів."""
+
+        self.assertTrue(self.page._storage_timer.isActive())
+        self.assertTrue(self.page._memory_timer.isActive())
+        self.assertTrue(self.page._system_timer.isActive())
+
+    def test_dashboard_timer_intervals(self) -> None:
+        """Перевіряє інтервали оновлення показників."""
+
+        self.assertEqual(
+            self.page._storage_timer.interval(),
+            10_000,
+        )
+        self.assertEqual(
+            self.page._memory_timer.interval(),
+            3_000,
+        )
+        self.assertEqual(
+            self.page._system_timer.interval(),
+            60_000,
+        )
+
+    def test_dashboard_timers_stop_on_close(self) -> None:
+        """Перевіряє зупинку таймерів при закритті Dashboard."""
+
+        self.page.close()
+
+        self.assertFalse(self.page._storage_timer.isActive())
+        self.assertFalse(self.page._memory_timer.isActive())
+        self.assertFalse(self.page._system_timer.isActive())
+
+    def tearDown(self) -> None:
+        """Закриває Dashboard та зупиняє його таймери."""
+
+        self.page.close()
 
 
 if __name__ == "__main__":

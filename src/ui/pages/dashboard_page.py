@@ -1,5 +1,7 @@
 """Головна сторінка огляду системи MacNexus."""
 
+from PySide6.QtCore import QTimer
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -15,12 +17,17 @@ from src.ui.widgets.status_card import StatusCard
 class DashboardPage(QWidget):
     """Відображає загальний огляд системи."""
 
+    STORAGE_REFRESH_INTERVAL = 10_000
+    MEMORY_REFRESH_INTERVAL = 3_000
+    SYSTEM_REFRESH_INTERVAL = 60_000
+
     def __init__(self) -> None:
         super().__init__()
 
         self._disk_service = DiskService()
         self._memory_service = MemoryService()
         self._system_service = SystemService()
+        self._setup_timers()
 
         self._storage_card = StatusCard(
             "Сховище",
@@ -38,6 +45,25 @@ class DashboardPage(QWidget):
         self._update_storage_status()
         self._update_memory_status()
         self._update_system_status()
+
+    def _setup_timers(self) -> None:
+        """Створює та запускає таймери оновлення системних показників."""
+
+        self._storage_timer = QTimer(self)
+        self._storage_timer.setInterval(self.STORAGE_REFRESH_INTERVAL)
+        self._storage_timer.timeout.connect(self._update_storage_status)
+
+        self._memory_timer = QTimer(self)
+        self._memory_timer.setInterval(self.MEMORY_REFRESH_INTERVAL)
+        self._memory_timer.timeout.connect(self._update_memory_status)
+
+        self._system_timer = QTimer(self)
+        self._system_timer.setInterval(self.SYSTEM_REFRESH_INTERVAL)
+        self._system_timer.timeout.connect(self._update_system_status)
+
+        self._storage_timer.start()
+        self._memory_timer.start()
+        self._system_timer.start()
 
     def _setup_ui(self) -> None:
         """Створює та компонувує елементи Dashboard."""
@@ -128,3 +154,12 @@ class DashboardPage(QWidget):
             status = "Не вдалося отримати дані"
 
         self._system_card.set_status(status)
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """Зупиняє таймери перед закриттям Dashboard."""
+
+        self._storage_timer.stop()
+        self._memory_timer.stop()
+        self._system_timer.stop()
+
+        super().closeEvent(event)
