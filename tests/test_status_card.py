@@ -97,6 +97,18 @@ class TestStatusCard(unittest.TestCase):
         self.assertIsNotNone(progress)
         self.assertEqual(progress.styleSheet(), "")
 
+    def test_progress_bar_turns_red_above_80_percent(self) -> None:
+        """Перевіряє червоний колір при використанні понад 80%."""
+
+        self.card = StatusCard("Пам'ять", "Перевірено", show_progress=True)
+
+        self.card.set_progress(80.1)
+
+        progress = self.card.findChild(QProgressBar, "usageBar")
+
+        self.assertIsNotNone(progress)
+        self.assertIn("#ef4444", progress.styleSheet())
+
 
 if __name__ == "__main__":
     unittest.main()

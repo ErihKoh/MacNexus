@@ -49,11 +49,12 @@ class StatusCard(QFrame):
         """Оновлює текст поточного стану."""
         self._status_label.setText(status)
 
-    def set_progress(self, value: int) -> None:
-        """Оновлює індикатор та попереджає про нестачу вільного місця."""
+    def set_progress(self, value: float) -> None:
+        """Оновлює індикатор та попереджає про критичне використання."""
+
         if self._progress_bar is not None:
-            usage = max(0, min(100, value))
-            self._progress_bar.setValue(usage)
+            usage = max(0.0, min(100.0, value))
+            self._progress_bar.setValue(round(usage))
 
             if usage > 80:
                 self._progress_bar.setStyleSheet(CRITICAL_PROGRESS_STYLE)

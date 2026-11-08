@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from src.services.disk_service import DiskService
+from src.services.memory_service import MemoryService
 from src.ui.widgets.status_card import StatusCard
 
 
@@ -17,17 +18,23 @@ class DashboardPage(QWidget):
         super().__init__()
 
         self._disk_service = DiskService()
+        self._memory_service = MemoryService()
 
         self._storage_card = StatusCard(
             "Сховище",
             "Завантаження...",
             show_progress=True,
         )
-        self._memory_card = StatusCard("Пам'ять", "Не перевірено")
+        self._memory_card = StatusCard(
+            "Пам'ять",
+            "Завантаження...",
+            show_progress=True,
+        )
         self._system_card = StatusCard("Система", "Не перевірено")
 
         self._setup_ui()
         self._update_storage_status()
+        self._update_memory_status()
 
     def _setup_ui(self) -> None:
         """Створює та компонувує елементи Dashboard."""
@@ -77,3 +84,26 @@ class DashboardPage(QWidget):
             status = "Не вдалося отримати дані"
 
         self._storage_card.set_status(status)
+
+    def _update_memory_status(self) -> None:
+        """Отримує та відображає інформацію про оперативну пам'ять."""
+
+        try:
+            usage = self._memory_service.get_usage()
+
+            total_gb = usage.total / (1024**3)
+            used_gb = usage.used / (1024**3)
+            available_gb = usage.available / (1024**3)
+
+            self._memory_card.set_progress(usage.percent)
+
+            status = (
+                f"Використано {used_gb:.1f} GB\n"
+                f"Доступно {available_gb:.1f} GB\n"
+                f"Загалом {total_gb:.1f} GB"
+            )
+
+        except OSError:
+            status = "Не вдалося отримати дані"
+
+        self._memory_card.set_status(status)
