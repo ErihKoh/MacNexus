@@ -2,14 +2,15 @@
 
 from PySide6.QtWidgets import (
     QApplication,
-    QFrame,
     QHBoxLayout,
-    QLabel,
     QMainWindow,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
+from src.ui.navigation import NAVIGATION_PAGES
+from src.ui.pages.dashboard_page import DashboardPage
+from src.ui.pages.placeholder_page import PlaceholderPage
 from src.ui.styles import THEMES
 from src.ui.widgets.sidebar import Sidebar
 from src.ui.widgets.theme_switch import ThemeSwitch
@@ -79,95 +80,7 @@ class MainWindow(QMainWindow):
     def _create_pages(self) -> None:
         """Створює сторінки застосунку."""
 
-        self._pages.addWidget(self._create_dashboard())
+        self._pages.addWidget(DashboardPage())
 
-        page_names = [
-            "System Junk",
-            "Disk Analyzer",
-            "Duplicates",
-            "Large Files",
-            "Applications",
-            "Privacy",
-            "Startup Manager",
-            "System Monitor",
-            "Time Machine",
-            "Maintenance",
-            "Settings",
-        ]
-
-        for page_name in page_names:
-            self._pages.addWidget(self._create_placeholder_page(page_name))
-
-    def _create_dashboard(self) -> QWidget:
-        """Створює головну сторінку Dashboard."""
-
-        content = QWidget()
-
-        layout = QVBoxLayout(content)
-        layout.setContentsMargins(32, 28, 32, 28)
-        layout.setSpacing(24)
-
-        header = QLabel("Огляд системи")
-        header.setObjectName("pageTitle")
-
-        description = QLabel("Стан вашого Mac та інструменти керування системою.")
-        description.setObjectName("pageDescription")
-
-        layout.addWidget(header)
-        layout.addWidget(description)
-
-        cards_layout = QHBoxLayout()
-        cards_layout.setSpacing(16)
-
-        cards_layout.addWidget(self._create_status_card("Сховище", "Не перевірено"))
-        cards_layout.addWidget(self._create_status_card("Пам'ять", "Не перевірено"))
-        cards_layout.addWidget(self._create_status_card("Система", "Не перевірено"))
-
-        layout.addLayout(cards_layout)
-        layout.addStretch()
-
-        return content
-
-    def _create_placeholder_page(self, page_name: str) -> QWidget:
-        """Створює тимчасову сторінку модуля."""
-
-        page = QWidget()
-
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(32, 28, 32, 28)
-        layout.setSpacing(16)
-
-        title = QLabel(page_name)
-        title.setObjectName("pageTitle")
-
-        description = QLabel("Цей модуль буде реалізовано на наступних етапах розробки.")
-        description.setObjectName("pageDescription")
-
-        layout.addWidget(title)
-        layout.addWidget(description)
-        layout.addStretch()
-
-        return page
-
-    def _create_status_card(self, title: str, status: str) -> QFrame:
-        """Створює картку системного показника."""
-
-        card = QFrame()
-        card.setObjectName("statusCard")
-        card.setMinimumHeight(130)
-
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(12)
-
-        title_label = QLabel(title)
-        title_label.setObjectName("cardTitle")
-
-        status_label = QLabel(status)
-        status_label.setObjectName("cardStatus")
-
-        layout.addWidget(title_label)
-        layout.addWidget(status_label)
-        layout.addStretch()
-
-        return card
+        for page_name in NAVIGATION_PAGES:
+            self._pages.addWidget(PlaceholderPage(page_name))

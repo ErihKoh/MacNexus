@@ -8,6 +8,12 @@ from PySide6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
+from src.ui.navigation import (
+    DASHBOARD_TITLE,
+    SETTINGS_PAGE,
+    SYSTEM_PAGES,
+    TOOL_PAGES,
+)
 
 
 class Sidebar(QFrame):
@@ -43,7 +49,13 @@ class Sidebar(QFrame):
         self._navigation_group = QButtonGroup(self)
         self._navigation_group.setExclusive(True)
 
-        self._add_navigation_button(layout, "Огляд", 0)
+        layout.addSpacing(12)
+
+        system_label = QLabel("СИСТЕМА")
+        system_label.setObjectName("subtitleLabel")
+        layout.addWidget(system_label)
+
+        self._add_navigation_button(layout, DASHBOARD_TITLE, 0)
 
         layout.addSpacing(12)
 
@@ -51,13 +63,8 @@ class Sidebar(QFrame):
         section_label.setObjectName("subtitleLabel")
         layout.addWidget(section_label)
 
-        self._add_navigation_button(layout, "System Junk", 1)
-        self._add_navigation_button(layout, "Disk Analyzer", 2)
-        self._add_navigation_button(layout, "Duplicates", 3)
-        self._add_navigation_button(layout, "Large Files", 4)
-        self._add_navigation_button(layout, "Applications", 5)
-        self._add_navigation_button(layout, "Privacy", 6)
-        self._add_navigation_button(layout, "Startup Manager", 7)
+        for page_index, page_name in enumerate(TOOL_PAGES, start=1):
+            self._add_navigation_button(layout, page_name, page_index)
 
         layout.addSpacing(12)
 
@@ -65,13 +72,18 @@ class Sidebar(QFrame):
         system_label.setObjectName("subtitleLabel")
         layout.addWidget(system_label)
 
-        self._add_navigation_button(layout, "System Monitor", 8)
-        self._add_navigation_button(layout, "Time Machine", 9)
-        self._add_navigation_button(layout, "Maintenance", 10)
+        system_start_index = 1 + len(TOOL_PAGES)
+
+        for page_index, page_name in enumerate(
+            SYSTEM_PAGES,
+            start=system_start_index,
+        ):
+            self._add_navigation_button(layout, page_name, page_index)
 
         layout.addStretch()
 
-        self._add_navigation_button(layout, "Settings", 11)
+        settings_index = 1 + len(TOOL_PAGES) + len(SYSTEM_PAGES)
+        self._add_navigation_button(layout, SETTINGS_PAGE, settings_index)
 
         version_label = QLabel("MacNexus 0.1.0")
         version_label.setObjectName("versionLabel")
