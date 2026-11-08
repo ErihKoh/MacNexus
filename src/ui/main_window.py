@@ -2,17 +2,16 @@
 
 from PySide6.QtWidgets import (
     QApplication,
-    QButtonGroup,
     QFrame,
     QHBoxLayout,
     QLabel,
     QMainWindow,
-    QPushButton,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
 from src.ui.styles import THEMES
+from src.ui.widgets.sidebar import Sidebar
 from src.ui.widgets.theme_switch import ThemeSwitch
 
 
@@ -41,7 +40,8 @@ class MainWindow(QMainWindow):
 
         self._pages = QStackedWidget()
 
-        sidebar = self._create_sidebar()
+        sidebar = Sidebar()
+        sidebar.page_changed.connect(self._pages.setCurrentIndex)
 
         content = QWidget()
         content_layout = QVBoxLayout(content)
@@ -65,88 +65,6 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(content, 1)
 
         self._create_pages()
-
-    def _create_sidebar(self) -> QFrame:
-        """Створює бічну панель навігації."""
-
-        sidebar = QFrame()
-        sidebar.setObjectName("sidebar")
-        sidebar.setFixedWidth(230)
-
-        layout = QVBoxLayout(sidebar)
-        layout.setContentsMargins(16, 24, 16, 24)
-        layout.setSpacing(8)
-
-        logo = QLabel("MacNexus")
-        logo.setObjectName("logoLabel")
-
-        subtitle = QLabel("SYSTEM MANAGEMENT")
-        subtitle.setObjectName("subtitleLabel")
-
-        layout.addWidget(logo)
-        layout.addWidget(subtitle)
-        layout.addSpacing(20)
-
-        self._navigation_group = QButtonGroup(self)
-        self._navigation_group.setExclusive(True)
-
-        self._add_navigation_button(layout, "Огляд", 0)
-
-        layout.addSpacing(12)
-
-        section_label = QLabel("ІНСТРУМЕНТИ")
-        section_label.setObjectName("subtitleLabel")
-        layout.addWidget(section_label)
-
-        self._add_navigation_button(layout, "System Junk", 1)
-        self._add_navigation_button(layout, "Disk Analyzer", 2)
-        self._add_navigation_button(layout, "Duplicates", 3)
-        self._add_navigation_button(layout, "Large Files", 4)
-        self._add_navigation_button(layout, "Applications", 5)
-        self._add_navigation_button(layout, "Privacy", 6)
-        self._add_navigation_button(layout, "Startup Manager", 7)
-
-        layout.addSpacing(12)
-
-        system_label = QLabel("СИСТЕМА")
-        system_label.setObjectName("subtitleLabel")
-        layout.addWidget(system_label)
-
-        self._add_navigation_button(layout, "System Monitor", 8)
-        self._add_navigation_button(layout, "Time Machine", 9)
-        self._add_navigation_button(layout, "Maintenance", 10)
-
-        layout.addStretch()
-
-        self._add_navigation_button(layout, "Settings", 11)
-
-        version_label = QLabel("MacNexus 0.1.0")
-        version_label.setObjectName("versionLabel")
-        layout.addWidget(version_label)
-
-        return sidebar
-
-    def _add_navigation_button(
-        self,
-        layout: QVBoxLayout,
-        title: str,
-        page_index: int,
-    ) -> None:
-        """Додає кнопку навігації."""
-
-        button = QPushButton(title)
-        button.setObjectName("navButton")
-        button.setCheckable(True)
-
-        self._navigation_group.addButton(button, page_index)
-        layout.addWidget(button)
-
-        button.clicked.connect(
-            lambda checked=False, index=page_index: self._pages.setCurrentIndex(index)
-        )
-
-        if page_index == 0:
-            button.setChecked(True)
 
     def _toggle_theme(self, checked: bool) -> None:
         """Перемикає оформлення застосунку."""
