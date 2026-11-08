@@ -2,7 +2,7 @@
 
 import unittest
 
-from PySide6.QtWidgets import QApplication, QLabel
+from PySide6.QtWidgets import QApplication, QLabel, QProgressBar
 from src.ui.widgets.status_card import StatusCard
 
 
@@ -41,6 +41,61 @@ class TestStatusCard(unittest.TestCase):
 
         self.assertIsNotNone(label)
         self.assertEqual(label.text(), "Перевірено")
+
+    def test_progress_bar_creation(self) -> None:
+        """Перевіряє створення індикатора."""
+
+        card = StatusCard("Сховище", "Перевірено", show_progress=True)
+        progress = card.findChild(QProgressBar, "usageBar")
+
+        self.assertIsNotNone(progress)
+        self.assertEqual(progress.value(), 0)
+
+    def test_set_progress(self) -> None:
+        """Перевіряє оновлення індикатора."""
+
+        card = StatusCard("Сховище", "Перевірено", show_progress=True)
+
+        card.set_progress(65)
+
+        progress = card.findChild(QProgressBar, "usageBar")
+
+        self.assertIsNotNone(progress)
+        self.assertEqual(progress.value(), 65)
+
+    def test_progress_bar_turns_red_below_20_percent_free(self) -> None:
+        """Перевіряє червоний колір при використанні понад 80%."""
+        card = StatusCard("Сховище", "Перевірено", show_progress=True)
+
+        card.set_progress(81)
+
+        progress = card.findChild(QProgressBar, "usageBar")
+
+        self.assertIsNotNone(progress)
+        self.assertIn("#ef4444", progress.styleSheet())
+
+    def test_progress_bar_keeps_normal_color_at_20_percent_free(self) -> None:
+        """Перевіряє стандартний колір при рівно 20% вільного місця."""
+        card = StatusCard("Сховище", "Перевірено", show_progress=True)
+
+        card.set_progress(80)
+
+        progress = card.findChild(QProgressBar, "usageBar")
+
+        self.assertIsNotNone(progress)
+        self.assertEqual(progress.styleSheet(), "")
+
+    def test_progress_bar_returns_to_normal_color(self) -> None:
+        """Перевіряє повернення стандартного кольору після попередження."""
+        card = StatusCard("Сховище", "Перевірено", show_progress=True)
+
+        card.set_progress(90)
+        card.set_progress(70)
+
+        progress = card.findChild(QProgressBar, "usageBar")
+
+        self.assertIsNotNone(progress)
+        self.assertEqual(progress.styleSheet(), "")
 
 
 if __name__ == "__main__":

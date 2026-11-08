@@ -18,7 +18,11 @@ class DashboardPage(QWidget):
 
         self._disk_service = DiskService()
 
-        self._storage_card = StatusCard("Сховище", "Завантаження...")
+        self._storage_card = StatusCard(
+            "Сховище",
+            "Завантаження...",
+            show_progress=True,
+        )
         self._memory_card = StatusCard("Пам'ять", "Не перевірено")
         self._system_card = StatusCard("Система", "Не перевірено")
 
@@ -60,6 +64,10 @@ class DashboardPage(QWidget):
             total_gb = usage.total / (1024**3)
             used_gb = usage.used / (1024**3)
             free_gb = usage.free / (1024**3)
+
+            usage_percent = usage.used / usage.total * 100 if usage.total > 0 else 0
+
+            self._storage_card.set_progress(round(usage_percent))
 
             status = (
                 f"Вільно {free_gb:.1f} GB\nВикористано {used_gb:.1f} GB\nЗагалом {total_gb:.1f} GB"

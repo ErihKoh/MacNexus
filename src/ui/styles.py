@@ -82,6 +82,16 @@ QLabel#versionLabel {
     color: #737b89;
     font-size: 11px;
 }
+QProgressBar#usageBar {
+    background-color: #343945;
+    border: none;
+    border-radius: 4px;
+}
+
+QProgressBar#usageBar::chunk {
+    background-color: #5b9cff;
+    border-radius: 4px;
+}
 """
 
 LIGHT_THEME = """
@@ -165,7 +175,24 @@ QLabel#versionLabel {
     color: #929aa7;
     font-size: 11px;
 }
+QProgressBar#usageBar {
+    background-color: #e1e5eb;
+    border: none;
+    border-radius: 4px;
+}
 
+QProgressBar#usageBar::chunk {
+    background-color: #3478d4;
+    border-radius: 4px;
+}
+
+"""
+
+CRITICAL_PROGRESS_STYLE = """
+QProgressBar::chunk {
+    background-color: #ef4444;
+    border-radius: 4px;
+}
 """
 
 THEMES = {
