@@ -5,6 +5,7 @@ import unittest
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
+from src.ui.navigation import DASHBOARD_TITLE, NAVIGATION_PAGES
 from src.ui.widgets.sidebar import Sidebar
 
 
@@ -22,12 +23,13 @@ class TestSidebar(unittest.TestCase):
 
         self.sidebar = Sidebar()
 
-    def test_sidebar_has_twelve_navigation_buttons(self) -> None:
-        """Перевіряє кількість кнопок навігації."""
-
+    def test_sidebar_has_correct_number_of_navigation_buttons(self) -> None:
+        """Перевіряє кількість кнопок відповідно до конфігурації."""
         buttons = self.sidebar._navigation_group.buttons()
 
-        self.assertEqual(len(buttons), 12)
+        expected_count = len(NAVIGATION_PAGES) + 1
+
+        self.assertEqual(len(buttons), expected_count)
 
     def test_dashboard_is_selected_by_default(self) -> None:
         """Перевіряє, що Огляд активний за замовчуванням."""
@@ -42,12 +44,14 @@ class TestSidebar(unittest.TestCase):
 
         buttons = self.sidebar._navigation_group.buttons()
 
-        for expected_id, button in enumerate(buttons):
-            with self.subTest(button=expected_id):
-                self.assertEqual(
-                    self.sidebar._navigation_group.id(button),
-                    expected_id,
-                )
+        buttons = self.sidebar._navigation_group.buttons()
+
+        actual_ids = sorted(self.sidebar._navigation_group.id(button) for button in buttons)
+
+        self.assertEqual(
+            actual_ids,
+            list(range(len(NAVIGATION_PAGES) + 1)),
+        )
 
     def test_click_changes_selected_button(self) -> None:
         """Перевіряє зміну активної кнопки."""
@@ -83,6 +87,20 @@ class TestSidebar(unittest.TestCase):
         QTest.mouseClick(button, Qt.MouseButton.LeftButton)
 
         self.assertEqual(received_values, [3])
+
+    def test_navigation_buttons_match_configuration(self) -> None:
+        """Перевіряє назви та індекси кнопок за конфігурацією."""
+        buttons = self.sidebar._navigation_group.buttons()
+
+        actual_pages = {
+            self.sidebar._navigation_group.id(button): button.text() for button in buttons
+        }
+
+        expected_pages = {
+            index: title for index, title in enumerate((DASHBOARD_TITLE, *NAVIGATION_PAGES))
+        }
+
+        self.assertEqual(actual_pages, expected_pages)
 
 
 if __name__ == "__main__":
