@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from src.services.disk_service import DiskService
 from src.ui.widgets.status_card import StatusCard
 
 
@@ -15,7 +16,14 @@ class DashboardPage(QWidget):
     def __init__(self) -> None:
         super().__init__()
 
+        self._disk_service = DiskService()
+
+        self._storage_card = StatusCard("Сховище", "Завантаження...")
+        self._memory_card = StatusCard("Пам'ять", "Не перевірено")
+        self._system_card = StatusCard("Система", "Не перевірено")
+
         self._setup_ui()
+        self._update_storage_status()
 
     def _setup_ui(self) -> None:
         """Створює та компонувує елементи Dashboard."""
@@ -36,9 +44,28 @@ class DashboardPage(QWidget):
         cards_layout = QHBoxLayout()
         cards_layout.setSpacing(16)
 
-        cards_layout.addWidget(StatusCard("Сховище", "Не перевірено"))
-        cards_layout.addWidget(StatusCard("Пам'ять", "Не перевірено"))
-        cards_layout.addWidget(StatusCard("Система", "Не перевірено"))
+        cards_layout.addWidget(self._storage_card)
+        cards_layout.addWidget(self._memory_card)
+        cards_layout.addWidget(self._system_card)
 
         layout.addLayout(cards_layout)
         layout.addStretch()
+
+    def _update_storage_status(self) -> None:
+        """Отримує та відображає інформацію про накопичувач."""
+
+        try:
+            usage = self._disk_service.get_usage()
+
+            total_gb = usage.total / (1024**3)
+            used_gb = usage.used / (1024**3)
+            free_gb = usage.free / (1024**3)
+
+            status = (
+                f"Вільно {free_gb:.1f} GB\nВикористано {used_gb:.1f} GB\nЗагалом {total_gb:.1f} GB"
+            )
+
+        except OSError:
+            status = "Не вдалося отримати дані"
+
+        self._storage_card.set_status(status)
