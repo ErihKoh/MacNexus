@@ -13,11 +13,11 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QTableWidget,
-    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
 from src.models.file_entry import FileEntry
+from src.ui.widgets.sortable_table_item import SortableTableWidgetItem
 from src.ui.workers.file_scan_worker import FileScanWorker
 
 
@@ -117,7 +117,9 @@ class DiskAnalyzerPage(QWidget):
 
         path = Path(self._path_input.text()).expanduser()
 
+        self._table.setSortingEnabled(False)
         self._table.setRowCount(0)
+
         self._total_size = 0
         self._file_count = 0
 
@@ -143,14 +145,15 @@ class DiskAnalyzerPage(QWidget):
         modified = datetime.fromtimestamp(entry.modified_at).strftime("%Y-%m-%d %H:%M")
 
         values = (
-            entry.name,
-            self._format_size(entry.size),
-            modified,
-            str(entry.path),
+            (entry.name, entry.name.casefold()),
+            (self._format_size(entry.size), entry.size),
+            (modified, entry.modified_at),
+            (str(entry.path), str(entry.path).casefold()),
         )
 
-        for column, value in enumerate(values):
-            item = QTableWidgetItem(value)
+        for column, (text, sort_value) in enumerate(values):
+            item = SortableTableWidgetItem(text)
+            item.setData(Qt.ItemDataRole.UserRole, sort_value)
 
             if column == 1:
                 item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
