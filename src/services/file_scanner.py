@@ -1,5 +1,6 @@
 """Сервіс сканування файлової системи."""
 
+from collections.abc import Callable
 from pathlib import Path
 
 from src.models.file_entry import FileEntry
@@ -8,7 +9,12 @@ from src.models.file_entry import FileEntry
 class FileScanner:
     """Збирає інформацію про файли в каталозі."""
 
-    def scan(self, path: str | Path) -> list[FileEntry]:
+    def scan(
+        self,
+        path: str | Path,
+        should_cancel: Callable[[], bool] | None = None,
+        on_file: Callable[[FileEntry], None] | None = None,
+    ) -> list[FileEntry]:
         """Рекурсивно сканує каталог і повертає знайдені файли."""
 
         root = Path(path)
@@ -29,11 +35,17 @@ class FileScanner:
             on_error=on_walk_error,
             follow_symlinks=False,
         ):
+            if should_cancel is not None and should_cancel():
+                break
+
             directories[:] = [
                 name for name in directories if not (current_path / name).is_symlink()
             ]
 
             for filename in filenames:
+                if should_cancel is not None and should_cancel():
+                    return entries
+
                 file_path = current_path / filename
 
                 try:
@@ -42,14 +54,18 @@ class FileScanner:
 
                     stat = file_path.stat()
 
-                    entries.append(
-                        FileEntry(
-                            path=file_path,
-                            name=file_path.name,
-                            size=stat.st_size,
-                            modified_at=stat.st_mtime,
-                        )
+                    entry = FileEntry(
+                        path=file_path,
+                        name=file_path.name,
+                        size=stat.st_size,
+                        modified_at=stat.st_mtime,
                     )
+
+                    entries.append(entry)
+
+                    if on_file is not None:
+                        on_file(entry)
+
                 except OSError:
                     continue
 

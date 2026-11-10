@@ -92,6 +92,43 @@ QProgressBar#usageBar::chunk {
     background-color: #5b9cff;
     border-radius: 4px;
 }
+
+QTableWidget {
+    background-color: #20232a;
+    alternate-background-color: #262a33;
+    color: #e4e7ed;
+    gridline-color: #343945;
+    border: 1px solid #343945;
+    border-radius: 6px;
+    selection-background-color: #303c55;
+    selection-color: #ffffff;
+}
+
+QTableWidget QHeaderView::section {
+    background-color: #292e38;
+    color: #aab1be;
+    border: none;
+    border-bottom: 1px solid #343945;
+    padding: 8px;
+    font-weight: bold;
+}
+
+QTableCornerButton::section {
+    background-color: #292e38;
+    border: none;
+}
+
+QLineEdit {
+    background-color: #20232a;
+    color: #e4e7ed;
+    border: 1px solid #343945;
+    border-radius: 6px;
+    padding: 7px;
+}
+
+QLineEdit:focus {
+    border: 1px solid #5b9cff;
+}
 """
 
 LIGHT_THEME = """
@@ -184,6 +221,43 @@ QProgressBar#usageBar {
 QProgressBar#usageBar::chunk {
     background-color: #3478d4;
     border-radius: 4px;
+}
+
+QTableWidget {
+    background-color: #ffffff;
+    alternate-background-color: #f4f6f9;
+    color: #252a34;
+    gridline-color: #e1e5eb;
+    border: 1px solid #e1e5eb;
+    border-radius: 6px;
+    selection-background-color: #dce9fb;
+    selection-color: #202630;
+}
+
+QTableWidget QHeaderView::section {
+    background-color: #eef1f5;
+    color: #525d6d;
+    border: none;
+    border-bottom: 1px solid #e1e5eb;
+    padding: 8px;
+    font-weight: bold;
+}
+
+QTableCornerButton::section {
+    background-color: #eef1f5;
+    border: none;
+}
+
+QLineEdit {
+    background-color: #ffffff;
+    color: #252a34;
+    border: 1px solid #d5dbe4;
+    border-radius: 6px;
+    padding: 7px;
+}
+
+QLineEdit:focus {
+    border: 1px solid #3478d4;
 }
 
 """

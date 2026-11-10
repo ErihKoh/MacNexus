@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 )
 from src.ui.navigation import NAVIGATION_PAGES
 from src.ui.pages.dashboard_page import DashboardPage
+from src.ui.pages.disk_analyzer_page import DiskAnalyzerPage
 from src.ui.pages.placeholder_page import PlaceholderPage
 from src.ui.styles import THEMES
 from src.ui.widgets.sidebar import Sidebar
@@ -83,4 +84,13 @@ class MainWindow(QMainWindow):
         self._pages.addWidget(DashboardPage())
 
         for page_name in NAVIGATION_PAGES:
-            self._pages.addWidget(PlaceholderPage(page_name))
+            page = self._create_page(page_name)
+            self._pages.addWidget(page)
+
+    def _create_page(self, page_name: str) -> QWidget:
+        """Створює відповідну сторінку за назвою."""
+
+        if page_name == "Disk Analyzer":
+            return DiskAnalyzerPage()
+
+        return PlaceholderPage(page_name)
