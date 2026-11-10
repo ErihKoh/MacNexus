@@ -1,9 +1,7 @@
 """Сторінка аналізу файлів MacNexus."""
 
-from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -12,12 +10,13 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QProgressBar,
     QPushButton,
-    QTableWidget,
+    QTableView,
     QVBoxLayout,
     QWidget,
 )
 from src.models.file_entry import FileEntry
-from src.ui.widgets.sortable_table_item import SortableTableWidgetItem
+from src.ui.models.file_sort_proxy_model import FileSortProxyModel
+from src.ui.models.file_table_model import FileTableModel
 from src.ui.workers.file_scan_worker import FileScanWorker
 
 
@@ -88,10 +87,16 @@ class DiskAnalyzerPage(QWidget):
 
         layout.addWidget(self._summary_label)
 
-        self._table = QTableWidget(0, 4)
-        self._table.setHorizontalHeaderLabels(["Назва", "Розмір", "Змінено", "Шлях"])
-        self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._source_model = FileTableModel()
+
+        self._proxy_model = FileSortProxyModel(self)
+        self._proxy_model.setSourceModel(self._source_model)
+
+        self._table = QTableView()
+        self._table.setModel(self._proxy_model)
+        self._table.setSortingEnabled(True)
+        self._table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
+        self._table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self._table.setAlternatingRowColors(True)
         self._table.horizontalHeader().setStretchLastSection(True)
 
@@ -118,7 +123,8 @@ class DiskAnalyzerPage(QWidget):
         path = Path(self._path_input.text()).expanduser()
 
         self._table.setSortingEnabled(False)
-        self._table.setRowCount(0)
+        self._proxy_model.setDynamicSortFilter(False)
+        self._source_model.clear()
 
         self._total_size = 0
         self._file_count = 0
@@ -130,46 +136,30 @@ class DiskAnalyzerPage(QWidget):
         self._cancel_button.setEnabled(True)
 
         self._worker = FileScanWorker(path)
-        self._worker.file_found.connect(self._add_file)
+        self._worker.batch_found.connect(self._add_batch)
         self._worker.scan_finished.connect(self._scan_finished)
         self._worker.scan_error.connect(self._scan_error)
         self._worker.finished.connect(self._finish_worker)
         self._worker.start()
 
-    def _add_file(self, entry: FileEntry) -> None:
-        """Додає знайдений файл до таблиці."""
+    def _add_batch(self, entries: list[FileEntry]) -> None:
+        """Додає пакет файлів до моделі."""
 
-        row = self._table.rowCount()
-        self._table.insertRow(row)
+        if not entries:
+            return
 
-        modified = datetime.fromtimestamp(entry.modified_at).strftime("%Y-%m-%d %H:%M")
+        self._source_model.append_entries(entries)
 
-        values = (
-            (entry.name, entry.name.casefold()),
-            (self._format_size(entry.size), entry.size),
-            (modified, entry.modified_at),
-            (str(entry.path), str(entry.path).casefold()),
-        )
+        self._file_count += len(entries)
+        self._total_size += sum(entry.size for entry in entries)
 
-        for column, (text, sort_value) in enumerate(values):
-            item = SortableTableWidgetItem(text)
-            item.setData(Qt.ItemDataRole.UserRole, sort_value)
+        self._update_summary()
 
-            if column == 1:
-                item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+    def _scan_finished(self, file_count: int, total_size: int) -> None:
+        """Обробляє завершення сканування."""
 
-            self._table.setItem(row, column, item)
-
-        self._file_count += 1
-        self._total_size += entry.size
-
-        self._summary_label.setText(
-            f"Знайдено файлів: {self._file_count} | "
-            f"Загальний розмір: {self._format_size(self._total_size)}"
-        )
-
-    def _scan_finished(self, _results: list) -> None:
-        """Обробляє завершення або скасування сканування."""
+        self._file_count = file_count
+        self._total_size = total_size
 
         self._summary_label.setText(
             f"Сканування завершено. Файлів: {self._file_count} | "
@@ -192,9 +182,27 @@ class DiskAnalyzerPage(QWidget):
     def _finish_worker(self) -> None:
         """Оновлює стан елементів після завершення потоку."""
 
+        self._proxy_model.setDynamicSortFilter(True)
+
+        header = self._table.horizontalHeader()
+        self._proxy_model.sort(
+            header.sortIndicatorSection(),
+            header.sortIndicatorOrder(),
+        )
+
+        self._table.setSortingEnabled(True)
+
         self._progress_bar.setVisible(False)
         self._scan_button.setEnabled(True)
         self._cancel_button.setEnabled(False)
+
+    def _update_summary(self) -> None:
+        """Оновлює підсумок сканування."""
+
+        self._summary_label.setText(
+            f"Знайдено файлів: {self._file_count} | "
+            f"Загальний розмір: {self._format_size(self._total_size)}"
+        )
 
     @staticmethod
     def _format_size(size: int) -> str:
@@ -211,7 +219,7 @@ class DiskAnalyzerPage(QWidget):
         return f"{value:.1f} TB"
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        """Безпечно завершує фонове сканування перед закриттям сторінки."""
+        """Безпечно завершує фонове сканування перед закриттям."""
 
         if self._worker is not None and self._worker.isRunning():
             self._worker.cancel()

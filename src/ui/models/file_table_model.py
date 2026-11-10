@@ -14,19 +14,20 @@ class FileTableModel(QAbstractTableModel):
     def __init__(self) -> None:
         super().__init__()
         self._entries: list[FileEntry] = []
+        self._path_sort_keys: list[str] = []
 
-    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    def rowCount(self, parent: QModelIndex | None = None) -> int:
         """Повертає кількість файлів."""
 
-        if parent.isValid():
+        if parent is not None and parent.isValid():
             return 0
 
         return len(self._entries)
 
-    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    def columnCount(self, parent: QModelIndex | None = None) -> int:
         """Повертає кількість стовпців."""
 
-        if parent.isValid():
+        if parent is not None and parent.isValid():
             return 0
 
         return len(self.HEADERS)
@@ -41,30 +42,34 @@ class FileTableModel(QAbstractTableModel):
         if not index.isValid():
             return None
 
+        if not (0 <= index.row() < len(self._entries)):
+            return None
+
+        if not (0 <= index.column() < len(self.HEADERS)):
+            return None
+
         entry = self._entries[index.row()]
         column = index.column()
 
         if role == Qt.ItemDataRole.DisplayRole:
             if column == 0:
                 return entry.name
-
             if column == 1:
                 return self._format_size(entry.size)
-
             if column == 2:
                 return datetime.fromtimestamp(entry.modified_at).strftime("%Y-%m-%d %H:%M")
-
             if column == 3:
-                return str(entry.path)
+                return self._path_sort_keys[index.row()]
 
         if role == Qt.ItemDataRole.UserRole:
-            values = (
-                entry.name.casefold(),
-                entry.size,
-                entry.modified_at,
-                str(entry.path).casefold(),
-            )
-            return values[column]
+            if column == 0:
+                return entry.name.casefold()
+            if column == 1:
+                return entry.size
+            if column == 2:
+                return entry.modified_at
+            if column == 3:
+                return str(entry.path).casefold()
 
         if role == Qt.ItemDataRole.TextAlignmentRole and column == 1:
             return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
@@ -99,12 +104,18 @@ class FileTableModel(QAbstractTableModel):
 
         self.beginInsertRows(QModelIndex(), first_row, last_row)
         self._entries.extend(entries)
+        self._path_sort_keys.extend(
+            str(entry.path).casefold() for entry in entries
+        )
         self.endInsertRows()
 
-    def entries(self) -> list[FileEntry]:
-        """Повертає копію списку файлів."""
+    def entry_at(self, row: int) -> FileEntry | None:
+        """Повертає запис за індексом рядка."""
 
-        return self._entries.copy()
+        if 0 <= row < len(self._entries):
+            return self._entries[row]
+
+        return None
 
     def clear(self) -> None:
         """Очищає модель."""
@@ -114,6 +125,7 @@ class FileTableModel(QAbstractTableModel):
 
         self.beginResetModel()
         self._entries.clear()
+        self._path_sort_keys.clear()
         self.endResetModel()
 
     @staticmethod

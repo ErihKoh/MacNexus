@@ -1,4 +1,4 @@
-"""Тести фонового сканування файлової системи."""
+"""Тести пакетного фонового сканування."""
 
 import tempfile
 import time
@@ -25,7 +25,7 @@ class TestFileScanWorker(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def _run_worker(self, worker: FileScanWorker) -> None:
-        """Запускає потік і надійно очікує його завершення."""
+        """Запускає потік і очікує його завершення."""
 
         finished_spy = QSignalSpy(worker.finished)
 
@@ -43,22 +43,39 @@ class TestFileScanWorker(unittest.TestCase):
         self.assertEqual(finished_spy.count(), 1)
         self.assertFalse(worker.isRunning())
 
-    def test_worker_returns_scan_results(self) -> None:
-        """Перевіряє передавання знайдених файлів."""
+    def test_worker_returns_files_in_batches(self) -> None:
+        """Перевіряє пакетне передавання файлів."""
 
-        file_path = self.root / "document.txt"
-        file_path.write_text("MacNexus", encoding="utf-8")
+        (self.root / "document.txt").write_text("MacNexus", encoding="utf-8")
 
         worker = FileScanWorker(self.root)
-        found_spy = QSignalSpy(worker.file_found)
+        batch_spy = QSignalSpy(worker.batch_found)
         finished_spy = QSignalSpy(worker.scan_finished)
 
         self._run_worker(worker)
 
-        self.assertEqual(found_spy.count(), 1)
+        self.assertEqual(batch_spy.count(), 1)
+        self.assertEqual(len(batch_spy.at(0)[0]), 1)
+
         self.assertEqual(finished_spy.count(), 1)
-        self.assertEqual(len(finished_spy.at(0)[0]), 1)
-        self.assertEqual(finished_spy.at(0)[0][0].name, "document.txt")
+        self.assertEqual(finished_spy.at(0), [1, 8])
+
+    def test_worker_splits_large_scan_into_batches(self) -> None:
+        """Перевіряє розбиття результатів на пакети."""
+
+        file_count = FileScanWorker.BATCH_SIZE + 10
+
+        for index in range(file_count):
+            (self.root / f"file_{index}.txt").touch()
+
+        worker = FileScanWorker(self.root)
+        batch_spy = QSignalSpy(worker.batch_found)
+
+        self._run_worker(worker)
+
+        self.assertEqual(batch_spy.count(), 2)
+        self.assertEqual(len(batch_spy.at(0)[0]), 500)
+        self.assertEqual(len(batch_spy.at(1)[0]), 10)
 
     def test_worker_reports_error_for_missing_directory(self) -> None:
         """Перевіряє передавання помилки."""
@@ -77,26 +94,15 @@ class TestFileScanWorker(unittest.TestCase):
         (self.root / "document.txt").write_text("Test", encoding="utf-8")
 
         worker = FileScanWorker(self.root)
+        batch_spy = QSignalSpy(worker.batch_found)
         finished_spy = QSignalSpy(worker.scan_finished)
 
         worker.cancel()
         self._run_worker(worker)
 
         self.assertEqual(finished_spy.count(), 1)
-        self.assertEqual(finished_spy.at(0)[0], [])
-
-    def test_worker_emits_file_found_signal(self) -> None:
-        """Перевіряє сигнал про знайдений файл."""
-
-        (self.root / "first.txt").write_text("First", encoding="utf-8")
-        (self.root / "second.txt").write_text("Second", encoding="utf-8")
-
-        worker = FileScanWorker(self.root)
-        found_spy = QSignalSpy(worker.file_found)
-
-        self._run_worker(worker)
-
-        self.assertEqual(found_spy.count(), 2)
+        self.assertEqual(finished_spy.at(0), [0, 0])
+        self.assertEqual(batch_spy.count(), 0)
 
 
 if __name__ == "__main__":

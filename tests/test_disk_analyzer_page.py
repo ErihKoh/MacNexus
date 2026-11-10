@@ -36,7 +36,7 @@ class TestDiskAnalyzerPage(unittest.TestCase):
     def test_page_initializes(self) -> None:
         """Перевіряє початковий стан сторінки."""
 
-        self.assertEqual(self.page._table.rowCount(), 0)
+        self.assertEqual(self.page._proxy_model.rowCount(), 0)
         self.assertTrue(self.page._scan_button.isEnabled())
         self.assertFalse(self.page._cancel_button.isEnabled())
         self.assertFalse(self.page._progress_bar.isVisible())
@@ -65,7 +65,7 @@ class TestDiskAnalyzerPage(unittest.TestCase):
 
         self.app.processEvents()
 
-        self.assertEqual(self.page._table.rowCount(), 2)
+        self.assertEqual(self.page._proxy_model.rowCount(), 2)
         self.assertEqual(self.page._file_count, 2)
         self.assertGreater(self.page._total_size, 0)
         self.assertTrue(self.page._scan_button.isEnabled())
