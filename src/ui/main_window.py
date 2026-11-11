@@ -12,6 +12,7 @@ from src.ui.navigation import NAVIGATION_PAGES
 from src.ui.pages.dashboard_page import DashboardPage
 from src.ui.pages.disk_analyzer_page import DiskAnalyzerPage
 from src.ui.pages.placeholder_page import PlaceholderPage
+from src.ui.pages.system_junk_page import SystemJunkPage
 from src.ui.styles import THEMES
 from src.ui.widgets.sidebar import Sidebar
 from src.ui.widgets.theme_switch import ThemeSwitch
@@ -89,6 +90,9 @@ class MainWindow(QMainWindow):
 
     def _create_page(self, page_name: str) -> QWidget:
         """Створює відповідну сторінку за назвою."""
+
+        if page_name == "System Junk":
+            return SystemJunkPage()
 
         if page_name == "Disk Analyzer":
             return DiskAnalyzerPage()

@@ -15,9 +15,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from src.models.file_entry import FileEntry
-from src.ui.models.file_sort_proxy_model import FileSortProxyModel
 from src.ui.models.file_table_model import FileTableModel
 from src.ui.workers.file_scan_worker import FileScanWorker
+from src.ui.workers.file_sort_worker import FileSortWorker
 
 
 class DiskAnalyzerPage(QWidget):
@@ -27,8 +27,10 @@ class DiskAnalyzerPage(QWidget):
         super().__init__()
 
         self._worker = None
+        self._sort_worker = None
         self._total_size = 0
         self._file_count = 0
+        self._scan_failed = False
 
         self._setup_ui()
 
@@ -89,12 +91,9 @@ class DiskAnalyzerPage(QWidget):
 
         self._source_model = FileTableModel()
 
-        self._proxy_model = FileSortProxyModel(self)
-        self._proxy_model.setSourceModel(self._source_model)
-
         self._table = QTableView()
-        self._table.setModel(self._proxy_model)
-        self._table.setSortingEnabled(True)
+        self._table.setModel(self._source_model)
+        self._table.setSortingEnabled(False)
         self._table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
         self._table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self._table.setAlternatingRowColors(True)
@@ -120,10 +119,11 @@ class DiskAnalyzerPage(QWidget):
         if self._worker is not None and self._worker.isRunning():
             return
 
+        self._scan_failed = False
+
         path = Path(self._path_input.text()).expanduser()
 
         self._table.setSortingEnabled(False)
-        self._proxy_model.setDynamicSortFilter(False)
         self._source_model.clear()
 
         self._total_size = 0
@@ -169,6 +169,7 @@ class DiskAnalyzerPage(QWidget):
     def _scan_error(self, message: str) -> None:
         """Відображає помилку сканування."""
 
+        self._scan_failed = True
         self._summary_label.setText(f"Помилка сканування: {message}")
 
     def _cancel_scan(self) -> None:
@@ -180,21 +181,27 @@ class DiskAnalyzerPage(QWidget):
             self._summary_label.setText("Скасування сканування...")
 
     def _finish_worker(self) -> None:
-        """Оновлює стан елементів після завершення потоку."""
-
-        self._proxy_model.setDynamicSortFilter(True)
-
-        header = self._table.horizontalHeader()
-        self._proxy_model.sort(
-            header.sortIndicatorSection(),
-            header.sortIndicatorOrder(),
-        )
-
-        self._table.setSortingEnabled(True)
+        """Запускає фонове сортування після завершення сканування."""
 
         self._progress_bar.setVisible(False)
-        self._scan_button.setEnabled(True)
+
+        if self._scan_failed:
+            self._scan_button.setEnabled(True)
+            self._cancel_button.setEnabled(False)
+            return
+
+        self._summary_label.setText("Сканування завершено. Сортування файлів за розміром…")
+
+        self._progress_bar.setRange(0, 0)
+        self._progress_bar.setVisible(True)
+
         self._cancel_button.setEnabled(False)
+
+        entries = self._source_model.entries_snapshot()
+
+        self._sort_worker = FileSortWorker(entries)
+        self._sort_worker.sorting_finished.connect(self._sorting_finished)
+        self._sort_worker.start()
 
     def _update_summary(self) -> None:
         """Оновлює підсумок сканування."""
@@ -219,10 +226,24 @@ class DiskAnalyzerPage(QWidget):
         return f"{value:.1f} TB"
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        """Безпечно завершує фонове сканування перед закриттям."""
+        """Безпечно завершує фонові потоки перед закриттям."""
 
         if self._worker is not None and self._worker.isRunning():
             self._worker.cancel()
             self._worker.wait()
 
+        if self._sort_worker is not None and self._sort_worker.isRunning():
+            self._sort_worker.wait()
+
         super().closeEvent(event)
+
+    def _sorting_finished(self, entries: list[FileEntry]) -> None:
+        """Оновлює таблицю після завершення сортування."""
+
+        self._source_model.replace_entries(entries)
+
+        self._progress_bar.setVisible(False)
+        self._scan_button.setEnabled(True)
+        self._cancel_button.setEnabled(False)
+
+        self._update_summary()

@@ -59,7 +59,7 @@ class FileTableModel(QAbstractTableModel):
             if column == 2:
                 return datetime.fromtimestamp(entry.modified_at).strftime("%Y-%m-%d %H:%M")
             if column == 3:
-                return self._path_sort_keys[index.row()]
+                return str(entry.path)
 
         if role == Qt.ItemDataRole.UserRole:
             if column == 0:
@@ -69,7 +69,7 @@ class FileTableModel(QAbstractTableModel):
             if column == 2:
                 return entry.modified_at
             if column == 3:
-                return str(entry.path).casefold()
+                return self._path_sort_keys[index.row()]
 
         if role == Qt.ItemDataRole.TextAlignmentRole and column == 1:
             return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
@@ -104,10 +104,23 @@ class FileTableModel(QAbstractTableModel):
 
         self.beginInsertRows(QModelIndex(), first_row, last_row)
         self._entries.extend(entries)
-        self._path_sort_keys.extend(
-            str(entry.path).casefold() for entry in entries
-        )
+        self._path_sort_keys.extend(str(entry.path).casefold() for entry in entries)
         self.endInsertRows()
+
+    def entries_snapshot(self) -> list[FileEntry]:
+        """Повертає копію списку записів для фонового оброблення."""
+
+        return self._entries.copy()
+
+    def replace_entries(self, entries: list[FileEntry]) -> None:
+        """Замінює записи моделі готовим списком файлів."""
+
+        self.beginResetModel()
+
+        self._entries = entries
+        self._path_sort_keys = [str(entry.path).casefold() for entry in entries]
+
+        self.endResetModel()
 
     def entry_at(self, row: int) -> FileEntry | None:
         """Повертає запис за індексом рядка."""

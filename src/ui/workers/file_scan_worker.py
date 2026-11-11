@@ -14,7 +14,7 @@ class FileScanWorker(QThread):
     BATCH_SIZE = 500
 
     batch_found = Signal(list)
-    scan_finished = Signal(int, int)
+    scan_finished = Signal(int, object)
     scan_error = Signal(str)
 
     def __init__(self, path: str | Path) -> None:

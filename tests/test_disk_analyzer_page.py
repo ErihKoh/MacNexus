@@ -36,7 +36,7 @@ class TestDiskAnalyzerPage(unittest.TestCase):
     def test_page_initializes(self) -> None:
         """Перевіряє початковий стан сторінки."""
 
-        self.assertEqual(self.page._proxy_model.rowCount(), 0)
+        self.assertEqual(self.page._source_model.rowCount(), 0)
         self.assertTrue(self.page._scan_button.isEnabled())
         self.assertFalse(self.page._cancel_button.isEnabled())
         self.assertFalse(self.page._progress_bar.isVisible())
@@ -65,7 +65,14 @@ class TestDiskAnalyzerPage(unittest.TestCase):
 
         self.app.processEvents()
 
-        self.assertEqual(self.page._proxy_model.rowCount(), 2)
+        sort_worker = self.page._sort_worker
+        self.assertIsNotNone(sort_worker)
+
+        self.assertTrue(sort_worker.wait(5000))
+
+        self.app.processEvents()
+
+        self.assertEqual(self.page._source_model.rowCount(), 2)
         self.assertEqual(self.page._file_count, 2)
         self.assertGreater(self.page._total_size, 0)
         self.assertTrue(self.page._scan_button.isEnabled())
@@ -106,6 +113,34 @@ class TestDiskAnalyzerPage(unittest.TestCase):
 
         self.assertFalse(worker.isRunning())
         self.assertTrue(worker._cancel_event.is_set())
+
+    def test_scan_sorts_files_by_size_descending(self) -> None:
+        """Перевіряє сортування файлів від найбільшого до найменшого."""
+
+        (self.root / "small.txt").write_bytes(b"a" * 10)
+        (self.root / "medium.txt").write_bytes(b"b" * 100)
+        (self.root / "large.txt").write_bytes(b"c" * 1000)
+
+        self.page._path_input.setText(str(self.root))
+        self.page._start_scan()
+
+        scan_worker = self.page._worker
+        self.assertTrue(scan_worker.wait(5000))
+
+        self.app.processEvents()
+
+        sort_worker = self.page._sort_worker
+        self.assertIsNotNone(sort_worker)
+        self.assertTrue(sort_worker.wait(5000))
+
+        self.app.processEvents()
+
+        sizes = [
+            self.page._source_model.entry_at(row).size
+            for row in range(self.page._source_model.rowCount())
+        ]
+
+        self.assertEqual(sizes, [1000, 100, 10])
 
 
 if __name__ == "__main__":

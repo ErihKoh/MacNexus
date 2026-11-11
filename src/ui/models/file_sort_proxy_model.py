@@ -1,4 +1,3 @@
-
 """Проксі-модель для сортування таблиці файлів."""
 
 from PySide6.QtCore import QSortFilterProxyModel, Qt
