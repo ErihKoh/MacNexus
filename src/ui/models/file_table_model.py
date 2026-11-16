@@ -14,7 +14,6 @@ class FileTableModel(QAbstractTableModel):
     def __init__(self) -> None:
         super().__init__()
         self._entries: list[FileEntry] = []
-        self._path_sort_keys: list[str] = []
 
     def rowCount(self, parent: QModelIndex | None = None) -> int:
         """Повертає кількість файлів."""
@@ -36,7 +35,7 @@ class FileTableModel(QAbstractTableModel):
         self,
         index: QModelIndex,
         role: int = Qt.ItemDataRole.DisplayRole,
-    ) -> str | int | float | None:
+    ) -> str | int | None:
         """Повертає значення комірки."""
 
         if not index.isValid():
@@ -60,16 +59,6 @@ class FileTableModel(QAbstractTableModel):
                 return datetime.fromtimestamp(entry.modified_at).strftime("%Y-%m-%d %H:%M")
             if column == 3:
                 return str(entry.path)
-
-        if role == Qt.ItemDataRole.UserRole:
-            if column == 0:
-                return entry.name.casefold()
-            if column == 1:
-                return entry.size
-            if column == 2:
-                return entry.modified_at
-            if column == 3:
-                return self._path_sort_keys[index.row()]
 
         if role == Qt.ItemDataRole.TextAlignmentRole and column == 1:
             return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
@@ -104,22 +93,18 @@ class FileTableModel(QAbstractTableModel):
 
         self.beginInsertRows(QModelIndex(), first_row, last_row)
         self._entries.extend(entries)
-        self._path_sort_keys.extend(str(entry.path).casefold() for entry in entries)
         self.endInsertRows()
 
-    def entries_snapshot(self) -> list[FileEntry]:
-        """Повертає копію списку записів для фонового оброблення."""
+    def entries_for_sorting(self) -> list[FileEntry]:
+        """Повертає записи для фонового сортування без копіювання."""
 
-        return self._entries.copy()
+        return self._entries
 
     def replace_entries(self, entries: list[FileEntry]) -> None:
         """Замінює записи моделі готовим списком файлів."""
 
         self.beginResetModel()
-
         self._entries = entries
-        self._path_sort_keys = [str(entry.path).casefold() for entry in entries]
-
         self.endResetModel()
 
     def entry_at(self, row: int) -> FileEntry | None:
@@ -138,7 +123,6 @@ class FileTableModel(QAbstractTableModel):
 
         self.beginResetModel()
         self._entries.clear()
-        self._path_sort_keys.clear()
         self.endResetModel()
 
     @staticmethod

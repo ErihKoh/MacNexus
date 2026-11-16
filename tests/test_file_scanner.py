@@ -90,6 +90,35 @@ class TestFileScanner(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].name, "target.txt")
 
+    def test_scan_stream_calculates_directory_statistics(self) -> None:
+        """Перевіряє сумарний розмір і кількість файлів у директоріях."""
+
+        nested_dir = self.root / "documents"
+        deep_dir = nested_dir / "reports"
+        deep_dir.mkdir(parents=True)
+
+        (self.root / "root.txt").write_bytes(b"12")
+        (nested_dir / "document.txt").write_bytes(b"123")
+        (deep_dir / "report.txt").write_bytes(b"12345")
+
+        directories = []
+
+        self.scanner.scan_stream(
+            self.root,
+            on_directory=directories.append,
+        )
+
+        stats = {entry.path: entry for entry in directories}
+
+        self.assertEqual(stats[self.root].size, 10)
+        self.assertEqual(stats[self.root].file_count, 3)
+
+        self.assertEqual(stats[nested_dir].size, 8)
+        self.assertEqual(stats[nested_dir].file_count, 2)
+
+        self.assertEqual(stats[deep_dir].size, 5)
+        self.assertEqual(stats[deep_dir].file_count, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

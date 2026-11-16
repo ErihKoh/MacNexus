@@ -4,6 +4,7 @@ from pathlib import Path
 
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
+    QComboBox,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -14,7 +15,9 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from src.models.directory_entry import DirectoryEntry
 from src.models.file_entry import FileEntry
+from src.ui.models.directory_table_model import DirectoryTableModel
 from src.ui.models.file_table_model import FileTableModel
 from src.ui.workers.file_scan_worker import FileScanWorker
 from src.ui.workers.file_sort_worker import FileSortWorker
@@ -30,6 +33,8 @@ class DiskAnalyzerPage(QWidget):
         self._sort_worker = None
         self._total_size = 0
         self._file_count = 0
+        self._directory_entries: list[DirectoryEntry] = []
+        self._directory_model = DirectoryTableModel()
         self._scan_failed = False
 
         self._setup_ui()
@@ -89,6 +94,12 @@ class DiskAnalyzerPage(QWidget):
 
         layout.addWidget(self._summary_label)
 
+        self._view_selector = QComboBox()
+        self._view_selector.addItems(["Файли", "Директорії"])
+        self._view_selector.currentIndexChanged.connect(self._change_view)
+
+        layout.addWidget(self._view_selector)
+
         self._source_model = FileTableModel()
 
         self._table = QTableView()
@@ -126,6 +137,10 @@ class DiskAnalyzerPage(QWidget):
         self._table.setSortingEnabled(False)
         self._source_model.clear()
 
+        self._directory_model.clear()
+        self._directory_entries.clear()
+        self._view_selector.setCurrentIndex(0)
+
         self._total_size = 0
         self._file_count = 0
 
@@ -137,6 +152,7 @@ class DiskAnalyzerPage(QWidget):
 
         self._worker = FileScanWorker(path)
         self._worker.batch_found.connect(self._add_batch)
+        self._worker.directory_stats_found.connect(self._set_directory_entries)
         self._worker.scan_finished.connect(self._scan_finished)
         self._worker.scan_error.connect(self._scan_error)
         self._worker.finished.connect(self._finish_worker)
@@ -197,8 +213,7 @@ class DiskAnalyzerPage(QWidget):
 
         self._cancel_button.setEnabled(False)
 
-        entries = self._source_model.entries_snapshot()
-
+        entries = self._source_model.entries_for_sorting()
         self._sort_worker = FileSortWorker(entries)
         self._sort_worker.sorting_finished.connect(self._sorting_finished)
         self._sort_worker.start()
@@ -247,3 +262,21 @@ class DiskAnalyzerPage(QWidget):
         self._cancel_button.setEnabled(False)
 
         self._update_summary()
+
+    def _change_view(self, index: int) -> None:
+        """Перемикає таблицю між файлами та директоріями."""
+
+        if index == 0:
+            self._table.setModel(self._source_model)
+        else:
+            self._table.setModel(self._directory_model)
+
+    def _set_directory_entries(self, entries: list[DirectoryEntry]) -> None:
+        """Зберігає та сортує статистику директорій."""
+
+        self._directory_entries = sorted(
+            entries,
+            key=lambda entry: entry.size,
+            reverse=True,
+        )
+        self._directory_model.replace_entries(self._directory_entries)

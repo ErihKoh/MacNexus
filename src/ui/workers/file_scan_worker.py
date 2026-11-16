@@ -4,6 +4,7 @@ from pathlib import Path
 from threading import Event
 
 from PySide6.QtCore import QThread, Signal
+from src.models.directory_entry import DirectoryEntry
 from src.models.file_entry import FileEntry
 from src.services.file_scanner import FileScanner
 
@@ -16,6 +17,7 @@ class FileScanWorker(QThread):
     batch_found = Signal(list)
     scan_finished = Signal(int, object)
     scan_error = Signal(str)
+    directory_stats_found = Signal(list)
 
     def __init__(self, path: str | Path) -> None:
         super().__init__()
@@ -24,6 +26,7 @@ class FileScanWorker(QThread):
         self._scanner = FileScanner()
         self._cancel_event = Event()
         self._batch: list[FileEntry] = []
+        self._directories: list[DirectoryEntry] = []
 
     def run(self) -> None:
         """Запускає потокове сканування."""
@@ -33,9 +36,11 @@ class FileScanWorker(QThread):
                 self._path,
                 should_cancel=self._cancel_event.is_set,
                 on_file=self._collect_file,
+                on_directory=self._collect_directory,
             )
 
             self._emit_batch()
+            self.directory_stats_found.emit(self._directories)
             self.scan_finished.emit(file_count, total_size)
 
         except (OSError, ValueError) as error:
@@ -65,3 +70,8 @@ class FileScanWorker(QThread):
         self._batch = []
 
         self.batch_found.emit(batch)
+
+    def _collect_directory(self, entry: DirectoryEntry) -> None:
+        """Зберігає статистику знайденої директорії."""
+
+        self._directories.append(entry)

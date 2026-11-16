@@ -22,4 +22,5 @@ class FileSortWorker(QThread):
             reverse=True,
         )
 
+        self._entries = []
         self.sorting_finished.emit(sorted_entries)
