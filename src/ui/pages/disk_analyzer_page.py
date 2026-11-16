@@ -19,6 +19,7 @@ from src.models.directory_entry import DirectoryEntry
 from src.models.file_entry import FileEntry
 from src.ui.models.directory_table_model import DirectoryTableModel
 from src.ui.models.file_table_model import FileTableModel
+from src.ui.widgets.directory_usage_chart import DirectoryUsageChart
 from src.ui.workers.file_scan_worker import FileScanWorker
 from src.ui.workers.file_sort_worker import FileSortWorker
 
@@ -100,6 +101,11 @@ class DiskAnalyzerPage(QWidget):
 
         layout.addWidget(self._view_selector)
 
+        self._usage_chart = DirectoryUsageChart()
+        self._usage_chart.setVisible(False)
+
+        layout.addWidget(self._usage_chart)
+
         self._source_model = FileTableModel()
 
         self._table = QTableView()
@@ -111,6 +117,11 @@ class DiskAnalyzerPage(QWidget):
         self._table.horizontalHeader().setStretchLastSection(True)
 
         layout.addWidget(self._table, 1)
+
+    def set_theme(self, theme: str) -> None:
+        """Передає активну тему діаграмі."""
+
+        self._usage_chart.set_theme(theme)
 
     def _select_directory(self) -> None:
         """Відкриває діалог вибору каталогу."""
@@ -268,15 +279,25 @@ class DiskAnalyzerPage(QWidget):
 
         if index == 0:
             self._table.setModel(self._source_model)
+            self._usage_chart.setVisible(False)
         else:
             self._table.setModel(self._directory_model)
+            self._usage_chart.setVisible(True)
 
     def _set_directory_entries(self, entries: list[DirectoryEntry]) -> None:
-        """Зберігає та сортує статистику директорій."""
+        """Оновлює статистику директорій та діаграму."""
 
         self._directory_entries = sorted(
             entries,
             key=lambda entry: entry.size,
             reverse=True,
         )
+
         self._directory_model.replace_entries(self._directory_entries)
+
+        root = Path(self._path_input.text()).expanduser()
+        self._usage_chart.set_data(
+            self._directory_entries,
+            self._total_size,
+            root,
+        )

@@ -79,6 +79,12 @@ class MainWindow(QMainWindow):
         if isinstance(app, QApplication):
             app.setStyleSheet(THEMES[self._current_theme])
 
+        for index in range(self._pages.count()):
+            page = self._pages.widget(index)
+
+            if isinstance(page, DiskAnalyzerPage):
+                page.set_theme(self._current_theme)
+
     def _create_pages(self) -> None:
         """Створює сторінки застосунку."""
 
