@@ -7,11 +7,13 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QTableView,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 from src.models.junk_scan_result import JunkScanResult
 from src.ui.models.junk_table_model import JunkTableModel
+from src.ui.pages.large_files_tab import LargeFilesTab
 from src.ui.workers.junk_scan_worker import JunkScanWorker
 
 
@@ -38,11 +40,30 @@ class SystemJunkPage(QWidget):
         title = QLabel("System Junk")
         title.setObjectName("pageTitle")
 
-        description = QLabel("Аналіз кешів, журналів і кошика. Файли не видаляються автоматично.")
+        description = QLabel("Аналіз кешів, журналів, кошика та великих файлів.")
         description.setObjectName("pageDescription")
 
         layout.addWidget(title)
         layout.addWidget(description)
+
+        self._tabs = QTabWidget()
+
+        junk_tab = QWidget()
+        junk_layout = QVBoxLayout(junk_tab)
+        junk_layout.setContentsMargins(0, 12, 0, 0)
+        junk_layout.setSpacing(16)
+
+        self._setup_junk_tab(junk_layout)
+
+        self._large_files_tab = LargeFilesTab()
+
+        self._tabs.addTab(junk_tab, "System Junk")
+        self._tabs.addTab(self._large_files_tab, "Large Files")
+
+        layout.addWidget(self._tabs, 1)
+
+    def _setup_junk_tab(self, layout: QVBoxLayout) -> None:
+        """Створює інтерфейс вкладки System Junk."""
 
         controls_layout = QHBoxLayout()
 
@@ -174,7 +195,9 @@ class SystemJunkPage(QWidget):
         return f"{value:.1f} TB"
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        """Завершує фоновий потік перед закриттям."""
+        """Завершує фонові потоки перед закриттям сторінки."""
+
+        self._large_files_tab.stop_scan()
 
         if self._worker is not None and self._worker.isRunning():
             self._worker.cancel()
